@@ -3,7 +3,34 @@ use WebminCore;
 use POSIX qw(strftime);
 &init_config();
 foreign_require("mount", "mount-lib.pl");
+
 my %access = &get_module_acl();
+
+sub getOS {
+  chomp(my $OS=`uname -s`);
+  chomp(my $VERSION=`uname -v`);
+  if (index($OS, "SunOS") != -1) {
+    if (index($VERSION,"joyent_") != -1) {
+      return "SmartOS";
+    }
+    elsif (index($VERSION,"oi_") != -1) {
+      return "OpenIndiana";
+    }
+    elsif (index($VERSION,"illumos") != -1) {
+      return "OpenIndiana";
+    }
+    elsif (index($VERSION,"omnios") != -1) {
+      return "OmniOS";
+    }
+    elsif (-f "/etc/debian_version") {
+      return "Nexenta";
+    }
+    else {
+      return "Solaris";
+    }
+  }
+  return "Linux";
+}
 
 sub properties_list
 #return hash of properties that can be set manually and their data type
@@ -63,20 +90,27 @@ elsif ((($zfs_props{$property}) && ($conf{'zfs_properties'} =~ /1/)) || (($pool_
 sub list_zpools
 {
 my ($pool) = @_;
-#zpool list
-#my @table=();
 my %hash=();
-#expecting NAME SIZE ALLOC FREE FRAG CAP DEDUP HEALTH ALTROOT
-$list=`zpool list -o name,size,alloc,free,frag,cap,dedup,health,altroot -H $pool`;
+my $os = &getOS();
+if ($os = "Solaris") {
+   #expecting NAME SIZE ALLOC FREE FRAG CAP DEDUP HEALTH ALTROOT
+   $list=`zpool list -o name,size,alloc,free,cap,dedup,health,altroot -H $pool`;
+} else {
+   #expecting NAME SIZE ALLOC FREE FRAG CAP DEDUP HEALTH ALTROOT
+   $list=`zpool list -o name,size,alloc,free,frag,cap,dedup,health,altroot -H $pool`;
+}
 
 open my $fh, "<", \$list;
-#my @table = split("", $firstline=<$fh>);
 while (my $line =<$fh>)
 {
     chomp ($line);
-    my($name, $size, $alloc, $free, $frag, $cap, $dedup, $health, $altroot) = split(" ", $line);
-    #$hash{$name} = [ $size, $alloc, $free, $frag, $cap, $dedup, $health, $altroot ];
-	$hash{$name} = { size => $size, alloc => $alloc, free => $free, frag => $frag, cap => $cap, dedup => $dedup, health => $health, altroot => $altroot };
+    if ($os = "Solaris") {
+       my($name, $size, $alloc, $free, $cap, $dedup, $health, $altroot) = split(" ", $line);
+	     $hash{$name} = { size => $size, alloc => $alloc, free => $free, cap => $cap, dedup => $dedup, health => $health, altroot => $altroot };
+    } else {
+       my($name, $size, $alloc, $free, $frag, $cap, $dedup, $health, $altroot) = split(" ", $line);
+       $hash{$name} = { size => $size, alloc => $alloc, free => $free, frag => $frag, cap => $cap, dedup => $dedup, health => $health, altroot => $altroot };
+    }
 }
 return %hash;
 }
@@ -385,10 +419,19 @@ sub ui_zpool_status
 my ($pool, $action) = @_;
 if ($action eq undef) { $action = "status.cgi?pool="; }
 my %zpool = list_zpools($pool);
-print ui_columns_start([ "Pool Name", "Size", "Alloc", "Free", "Frag", "Cap", "Dedup", "Health"]);
-foreach $key (keys %zpool)
-{
+my $os = &getOS();
+if ($os = "Solaris") {
+  print ui_columns_start([ "Pool Name", "Size", "Alloc", "Free", "Cap", "Dedup", "Health"]);
+  foreach $key (keys %zpool)
+  {
+    print ui_columns_row(["<a href='$action$key'>$key</a>", $zpool{$key}{size}, $zpool{$key}{alloc}, $zpool{$key}{free}, $zpool{$key}{cap}, $zpool{$key}{dedup}, $zpool{$key}{health} ]);
+  }
+} else {
+  print ui_columns_start([ "Pool Name", "Size", "Alloc", "Free", "Frag", "Cap", "Dedup", "Health"]);
+  foreach $key (keys %zpool)
+  {
     print ui_columns_row(["<a href='$action$key'>$key</a>", $zpool{$key}{size}, $zpool{$key}{alloc}, $zpool{$key}{free}, $zpool{$key}{frag}, $zpool{$key}{cap}, $zpool{$key}{dedup}, $zpool{$key}{health} ]);
+  }
 }
 print ui_columns_end();
 }
