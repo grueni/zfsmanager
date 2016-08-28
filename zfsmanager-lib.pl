@@ -1,7 +1,7 @@
 BEGIN { push(@INC, ".."); };
 use WebminCore;
 use POSIX qw(strftime);
-init_config();
+&init_config();
 foreign_require("mount", "mount-lib.pl");
 my %access = &get_module_acl();
 
@@ -37,20 +37,15 @@ return %list;
 
 sub get_zfsmanager_config
 {
-#my ($setting)=@_;
-my $lref = &read_file_lines($config{'zfsmanager_conf'});
-my %rv;
-my $lnum = 0;
-foreach my $line (@$lref) {
-    my ($n, $v) = split(/=/, $line, 2);
-    if ($n) {
-	  #$rv{$n} = { 'value' => $v, 'line' => $lnum };
-	  $rv{$n} = $v;
-      #push(@rv, { 'name' => $n, 'value' => $v, 'line' => $lnum });
-      }
-    $lnum++;
-    }
-return %rv;
+   my %rv;
+   $rv{'pool_destroy'} = $config{'pool_destroy'};
+   $rv{'zfs_destroy'} = $config{'zfs_destroy'};
+   $rv{'snap_destroy'} = $config{'snap_destroy'};
+   $rv{'pool_properties'} = $config{'pool_properties'};
+   $rv{'zfs_properties'} = $config{'zfs_properties'};
+   $rv{'snap_properties'} = $config{'snap_properties'};
+   $rv{'list_snap'} = $config{'list_snap'};
+   return %rv;
 }
 
 #determine if a property can be edited
@@ -457,6 +452,7 @@ print ui_table_end();
 sub ui_list_snapshots
 {
 my ($zfs, $admin) = @_;
+$admin = 1;
 %snapshot = list_snapshots($zfs);
 %conf = get_zfsmanager_config();
 if ($admin =~ /1/) { 
