@@ -122,16 +122,15 @@ sub list_zfs
 my ($zfs) = @_;
 my %hash=();
 #expecting NAME USED AVAIL REFER MOUNTPOINT
-$list=`zfs list -o name,used,avail,refer,mountpoint -H $zfs`;
+$list=`zfs list -o name,used,avail,compressratio,refer,mountpoint -H $zfs`;
 
 open my $fh, "<", \$list;
 #my @table = split("", $firstline=<$fh>);
 while (my $line =<$fh>)
 {
-    chomp ($line);
-    my($name, $used, $avail, $refer, $mount) = split(" ", $line);
-    #$hash{$name} = [ $used, $avail, $refer, $mount ];
-	$hash{$name} = { used => $used, avail => $avail, refer => $refer, mount => $mount };
+  chomp ($line);
+  my($name, $used, $avail, $compressratio, $refer, $mount) = split(" ", $line);
+	$hash{$name} = { used => $used, avail => $avail, compressratio => $compressratio, refer => $refer, mount => $mount };
 }
 return %hash;
 }
@@ -462,10 +461,10 @@ sub ui_zfs_list
 my ($zfs, $action)=@_;
 my %zfs = list_zfs($zfs);
 if ($action eq undef) { $action = "status.cgi?zfs="; }
-print ui_columns_start([ "File System", "Used", "Avail", "Refer", "Mountpoint" ]);
+print ui_columns_start([ "File System", "Used", "Avail", "Compressratio", "Refer", "Mountpoint" ]);
 foreach $key (sort(keys %zfs)) 
 {
-	print ui_columns_row([ "<a href='$action$key'>$key</a>", $zfs{$key}{used}, $zfs{$key}{avail}, $zfs{$key}{refer}, $zfs{$key}{mount} ]);
+  print ui_columns_row([ "<a href='$action$key'>$key</a>", $zfs{$key}{used}, $zfs{$key}{avail}, $zfs{$key}{compressratio}, $zfs{$key}{refer}, $zfs{$key}{mount} ]);
 }
 print ui_columns_end();
 }
