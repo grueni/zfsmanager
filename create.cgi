@@ -318,25 +318,14 @@ if ($in{'create'} =~ "zpool")
 } elsif (($in{'create'} =~ "snapshot") &&  ($in{'zfs'} eq undef)) {
 	ui_print_header(undef, $text{'snapshot_new'}, "", undef, 1, 1);
 	%zfs = list_zfs();
-	#print "Select filesystem for snapshot";
-	print ui_columns_start([ "File System", "Used", "Avail", "Refer", "Mountpoint" ]);
-	foreach $key (sort(keys %zfs)) 
-	{
-		print ui_columns_row(["<a href='create.cgi?create=snapshot&zfs=$key'>$key</a>", $zfs{$key}{used}, $zfs{$key}{avail}, $zfs{$key}{refer}, $zfs{$key}{mount} ]);
-	}
-	print ui_columns_end();
+  print_zfs("create.cgi?create=snapshot&zfs=",\%zfs);
 	#ui_print_footer('index.cgi?mode=snapshot', $text{'snapshot_return'});
 	@footer = ('index.cgi?mode=snapshot', $text{'snapshot_return'});
 #handle creation of snapshot
 } elsif ($in{'create'} =~ "snapshot") {
 	ui_print_header(undef, $text{'snapshot_create'}, "", undef, 1, 1);
 	%zfs = list_zfs($in{'zfs'});
-	print ui_columns_start([ "File System", "Used", "Avail", "Refer", "Mountpoint" ]);
-	foreach $key (sort(keys %zfs)) 
-	{
-		print ui_columns_row(["<a href='status.cgi?zfs=$key'>$key</a>", $zfs{$key}{used}, $zfs{$key}{avail}, $zfs{$key}{refer}, $zfs{$key}{mount} ]);
-	}
-	print ui_columns_end();
+  print_zfs("status.cgi?zfs=",\%zfs);
 	#show list of snapshots based on filesystem
 	print "Snapshots already on this filesystem: <br />";
 	%snapshot = list_snapshots();

@@ -39,13 +39,8 @@ print &ui_tabs_end_tab("mode", "pools");
 #start zfs tab
 print &ui_tabs_start_tab("mode", "zfs");
 %zfs = list_zfs();
-print ui_columns_start([ "File System", "Used", "Avail", "Refer", "Mountpoint" ]);
-foreach $key (sort(keys %zfs)) 
-{
-    print ui_columns_row(["<a href='status.cgi?zfs=$key'>$key</a>", $zfs{$key}{used}, $zfs{$key}{avail}, $zfs{$key}{refer}, $zfs{$key}{mount} ]);
-}
-print ui_columns_end();
-#print $conf{'zfs_properties'};
+print_zfs("status.cgi?zfs=",\%zfs);
+
 #if ($conf{'zfs_properties'} =~ /1/) { print ui_popup_link('Create file system', 'create.cgi?create=zfs'); }
 if ($conf{'zfs_properties'} =~ /1/) { print "<a href='create.cgi?create=zfs'>Create file system</a>"; }
 print &ui_tabs_end_tab("mode", "zfs");

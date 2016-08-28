@@ -19,13 +19,7 @@ ui_zpool_properties($in{'pool'});
 
 #Show associated file systems
 %zfs = list_zfs("-r ".$in{'pool'});
-#print "Filesystems:";
-print ui_columns_start([ "File System", "Used", "Avail", "Refer", "Mountpoint" ]);
-foreach $key (sort(keys %zfs)) 
-{
-    print ui_columns_row(["<a href='status.cgi?zfs=$key'>$key</a>", $zfs{$key}{used}, $zfs{$key}{avail}, $zfs{$key}{refer}, $zfs{$key}{mount} ]);
-}
-print ui_columns_end();
+print_zfs("status.cgi?zfs=",\%zfs);
 
 #Show device configuration
 #TODO: show devices by vdev hierarchy

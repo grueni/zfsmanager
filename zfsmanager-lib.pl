@@ -6,6 +6,17 @@ foreign_require("mount", "mount-lib.pl");
 
 my %access = &get_module_acl();
 
+sub print_zfs {
+  my $action = shift;
+  my $zfs = shift;
+  print ui_columns_start([ "File System", "Used", "Avail", "Compressratio", "Refer", "Mountpoint" ]);
+  foreach $key (sort(keys %{$zfs}))
+  {
+    print ui_columns_row([ "<a href='$action$key'>$key</a>", $zfs{$key}{used}, $zfs{$key}{avail}, $zfs{$key}{compressratio}, $zfs{$key}{refer}, $zfs{$key}{mount} ]);
+  }
+  print ui_columns_end();
+}
+
 sub getOS {
   chomp(my $OS=`uname -s`);
   chomp(my $VERSION=`uname -v`);
@@ -200,6 +211,7 @@ my ($pool)=@_;
 my $parent = "pool";
 my %status = ();
 my $cmd=`zpool status $pool`;
+my $devs = 0;
 (undef, $cmdout) = split(/  pool: /, $cmd);
 ($status{0}{pool}, $cmdout) = split(/ state: /, $cmdout);
 chomp $status{0}{pool};
@@ -220,7 +232,7 @@ $fh= $status{0}{config};
 @array = split("\n", $fh);
 foreach $line (@array) #while (my $line =<$fh>) 
 {
-    chomp ($line);
+  chomp ($line);
 	my($name, $state, $read, $write, $cksum) = split(" ", $line);
 
 	if ($name =~ "NAME") { #do nothing 
@@ -238,7 +250,7 @@ foreach $line (@array) #while (my $line =<$fh>)
 		$parent = $devs;
 		$devs++;
 		
-	#check if vdev is a log or cache vdev
+	#check if vdev is a mirror, raidz or spare
 	} elsif (($name =~ /mirror/) || ($name =~ /raidz/) || ($name =~ /spare/))
 	{
 		$status{$devs} = {name => $name, state => $state, read => $read, write => $write, cksum => $cksum, parent => $parent};
@@ -251,7 +263,6 @@ foreach $line (@array) #while (my $line =<$fh>)
 		$status{$devs} = {name => $name, state => $state, read => $read, write => $write, cksum => $cksum, parent => $parent,};
 		$devs++;
 	}
-	
 }
 return %status;
 }
@@ -458,15 +469,10 @@ print ui_table_end();
 
 sub ui_zfs_list
 {
-my ($zfs, $action)=@_;
-my %zfs = list_zfs($zfs);
-if ($action eq undef) { $action = "status.cgi?zfs="; }
-print ui_columns_start([ "File System", "Used", "Avail", "Compressratio", "Refer", "Mountpoint" ]);
-foreach $key (sort(keys %zfs)) 
-{
-  print ui_columns_row([ "<a href='$action$key'>$key</a>", $zfs{$key}{used}, $zfs{$key}{avail}, $zfs{$key}{compressratio}, $zfs{$key}{refer}, $zfs{$key}{mount} ]);
-}
-print ui_columns_end();
+   my ($zfs, $action)=@_;
+   my %zfs = list_zfs($zfs);
+   if ($action eq undef) { $action = "status.cgi?zfs="; }
+   print_zfs($action,\%zfs);
 }
 
 sub ui_zfs_properties
