@@ -128,7 +128,7 @@ sub can_edit
   %pool_props = pool_properties_list();
   my %type = zfs_get($zfs, 'type');
   if ($type{$zfs}{type}{value} =~ 'snapshot') { return 0; } 
-  elsif ((($zfs_props{$property}) && ($conf{'zfs_properties'} =~ /1/)) || (($pool_props{$property}) && ($conf{'pool_properties'} =~ /1/))) { return 1; }
+  elsif (($zfs_props{$property} && $conf{'zfs_properties'}) || ($pool_props{$property} && $conf{'pool_properties'})) { return 1; }
 }
 
 sub list_zpools
@@ -526,37 +526,32 @@ sub ui_zfs_properties
 
 sub ui_list_snapshots
 {
-  my ($zfs, $admin) = @_;
-  $admin = 1;
+  my ($zfs) = @_;
   %snapshot = list_snapshots($zfs);
   %conf = get_zfsmanager_config();
-  if ($admin =~ /1/) { 
-    #print ui_form_start('cmd.cgi', 'get', 'cmd'); 
+  if ($conf{'snap_destroy'}) { 
     print ui_form_start('cmd.cgi', 'post');
-    #print ui_hidden('multisnap', 1);
     print ui_hidden('cmd', 'multisnap');
-    }
-  #if ($admin =~ /1/) { print select_all_link('snap', '', "Select All"), " | ", select_invert_link('snap', '', "Invert Selection") }
+    print select_all_link('select', '', "Select All"), " | ", select_invert_link('select', '', "Invert Selection");
+    print " | ".ui_submit("Destroy selected snapshots");
+  }
   print ui_columns_start([ "Snapshot", "Used", "Refer" ]);
   my $num = 0;
   foreach $key (sort(keys %snapshot))
   {
-    #print ui_columns_row([ui_checkbox("snap", $key, "<a href='snapshot.cgi?snap=$key'>$key</a>"), $snapshot{$key}{used}, $snapshot{$key}{refer} ]);
-    if ($admin =~ /1/) {
+    if ($conf{'snap_destroy'}) {
       print ui_columns_row([ui_checkbox("select", $key.";", "<a href='status.cgi?snap=$key'>$key</a>"), $snapshot{$key}{used}, $snapshot{$key}{refer} ]);
       $num ++;
     } else {
       print ui_columns_row([ "<a href='status.cgi?snap=$key'>$key</a>", $snapshot{$key}{used}, $snapshot{$key}{refer} ]);
     }
-    #if ($zfs =~ undef) { print ui_columns_row([ui_checkbox("snap", $key, "<a href='snapshot.cgi?snap=$key'>$key</a>"), $snapshot{$key}{used}, $snapshot{$key}{refer} ]); }
-    #else {
-    #	if ($key =~ ($zfs."@")) { print ui_columns_row([ui_checkbox("snap", $key, "<a href='snapshot.cgi?snap=$key'>$key</a>"), $snapshot{$key}{used}, $snapshot{$key}{refer} ]); }
-    #}
   }
   print ui_columns_end();
-  if ($admin =~ /1/) { print select_all_link('select', '', "Select All"), " | ", select_invert_link('select', '', "Invert Selection") }
-  if (($admin =~ /1/) && ($conf{'snap_destroy'} =~ /1/)) { print " | ".ui_submit("Destroy selected snapshots"); }
-  if ($admin =~ /1/) { print ui_form_end(); }
+  if ($conf{'snap_destroy'}) {
+    print select_all_link('select', '', "Select All"), " | ", select_invert_link('select', '', "Invert Selection");
+#    print " | ".ui_submit("Destroy selected snapshots");
+    print ui_form_end();
+  }    
 }
 
 sub ui_create_snapshot

@@ -52,7 +52,7 @@ print "Children: ";
 			print "<a href='config-vdev.cgi?pool=$in{pool}&dev=$key'>".$status{$key}{name}."</a>  ";
 		}
 	}
-} elsif ($conf{'pool_properties'} =~ /1/) {
+} elsif ($conf{'pool_properties'}) {
 	#print "VDEV Status: ", $status{$in{'dev'}}{state}, "<br />";
 	print ui_table_start("Tasks", "width=100%", "10", ['align=left'] );
 	if ($status{$in{'dev'}}{state} =~ "ONLINE")	{
