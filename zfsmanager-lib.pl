@@ -148,7 +148,7 @@ sub list_zpools
   while (my $line =<$fh>)
   {
     chomp ($line);
-    if ($os = "Solaris") {
+    if ($os eq "Solaris") {
        my($name, $size, $alloc, $free, $cap, $dedup, $health, $altroot) = split(" ", $line);
 	     $hash->{$name} = { size => $size, alloc => $alloc, free => $free, cap => $cap, dedup => $dedup, health => $health, altroot => $altroot };
     } else {
@@ -183,7 +183,7 @@ sub list_snapshots
   #zfs list -t snapshot
   my %hash=();
   #expecting NAME USED AVAIL REFER MOUNTPOINT
-  $list=`zfs list -t snapshot $snap -H`;
+  $list=`zfs list -t snapshot -H $snap`;
 
   open my $fh, "<", \$list;
   while (my $line =<$fh>)
@@ -508,7 +508,6 @@ sub ui_zfs_properties
   if (!$hash{$zfs}{'com.sun:auto-snapshot'}) { $hash{$zfs}{'com.sun:auto-snapshot'}{'value'} = '-'; }
   my %props =  property_desc();
   my %properties = properties_list();
-  print ui_table_start("Properties", "width=100%", undef);
   foreach $key (sort(keys %{$hash{$zfs}}))
   {		
     if (($properties{$key}) || ($props{$key}))
@@ -519,7 +518,6 @@ sub ui_zfs_properties
     print ui_table_row($key, $hash{$zfs}{$key}{value});
     }
   }
-  print ui_table_end();
 }
 
 sub ui_snapshot_list
