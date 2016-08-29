@@ -524,7 +524,7 @@ sub ui_zfs_properties
   print ui_table_end();
 }
 
-sub ui_list_snapshots
+sub ui_snapshot_list
 {
   my ($zfs) = @_;
   %snapshot = list_snapshots($zfs);
@@ -554,7 +554,7 @@ sub ui_list_snapshots
   }    
 }
 
-sub ui_create_snapshot
+sub ui_snapshot_create
 {
   my ($zfs) = @_;
   $rv = ui_form_start('cmd.cgi', 'post')."\n";

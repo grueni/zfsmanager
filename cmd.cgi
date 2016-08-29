@@ -30,7 +30,7 @@ elsif ($in{'cmd'} =~ "snapshot")  {
 		my $cmd = ($conf{'snap_properties'}) ? "zfs snapshot ".$in{'zfs'}."@".$in{'snap'} : undef;
 		$in{'confirm'} = "yes";
 		print ui_cmd("create snapshot $in{'snap'}", $cmd);
-		print "", (!$result[1]) ? ui_list_snapshots($in{'zfs'}."@".$in{'snap'}) : undef;
+		print "", (!$result[1]) ? ui_snapshot_list($in{'zfs'}."@".$in{'snap'}) : undef;
 }
 elsif ($in{'cmd'} =~ "createzfs")  {
 	#print "Attempting to create filesystem $in{'parent'}/$in{'zfs'} with command... <br />";
@@ -170,7 +170,7 @@ elsif ($in{'cmd'} =~ "zfsdestroy")  {
 		print ui_hidden('zfs', $in{'zfs'});
 		print "<b>This action will affect the following: </b><br />";
 		ui_zfs_list('-r '.$in{'zfs'});
-		ui_list_snapshots('-r '.$in{'zfs'});
+		ui_snapshot_list('-r '.$in{'zfs'});
 		if ($conf{'zfs_destroy'} && $conf{'snap_destroy'}) { print ui_checkbox('force', '-r', 'Click to destroy all child dependencies (recursive)', undef ), "<br />"; }
 		print "<h3>Warning, this action will result in data loss, do you really want to continue?</h3>";
 		print ui_checkbox('confirm', 'yes', 'I understand', undef );
@@ -194,7 +194,7 @@ elsif ($in{'cmd'} =~ "snpdestroy")  {
 		print ui_hidden('cmd', 'snpdestroy');
 		print ui_hidden('snapshot', $in{'snapshot'});
 		print "<b>This action will affect the following: </b><br />";
-		ui_list_snapshots('-r '.$in{'snapshot'});
+		ui_snapshot_list('-r '.$in{'snapshot'});
 		if ($conf{'zfs_destroy'} && $conf{'snap_destroy'}) { print ui_checkbox('force', '-r', 'Click to destroy all child dependencies (recursive)', undef ), "<br />"; }
 		print "<h3>Warning, this action will result in data loss, do you really want to continue?</h3>";
 		print ui_checkbox('confirm', 'yes', 'I understand', undef );
@@ -211,10 +211,7 @@ elsif ($in{'cmd'} =~ "snpdestroy")  {
 	@footer = ("index.cgi?mode=snapshot", $text{'snapshot_return'});
 }
 elsif ($in{'cmd'} =~ "pooldestroy")  {
-my $cmd = ($conf{'pool_destroy'}) ? "zpool destroy $in{'pool'}" : undef;
-	#print "<h2>Destroy</h2>";
-	#ui_zfs_list('-r '.$in{'destroypool'});
-	#print ui_list_snapshots($in{'destroy'});
+  my $cmd = ($conf{'pool_destroy'}) ? "zpool destroy $in{'pool'}" : undef;
 
 	if (!$in{'confirm'})
 	{
@@ -224,7 +221,7 @@ my $cmd = ($conf{'pool_destroy'}) ? "zpool destroy $in{'pool'}" : undef;
 		print ui_hidden('pool', $in{'pool'});
 		print "<b>This action will affect the following: </b><br />";
 		ui_zfs_list('-r '.$in{'pool'});
-		ui_list_snapshots('-r '.$in{'pool'});
+		ui_snapshot_list('-r '.$in{'pool'});
 		print "<h3>Warning, this action will result in data loss, do you really want to continue?</h3>";
 		print ui_checkbox('confirm', 'yes', 'I understand', undef );
 		print ui_hidden('checked', 'no');

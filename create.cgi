@@ -258,18 +258,14 @@ if ($in{'create'} =~ "zpool")
         print ui_form_start("cmd.cgi", "post");
 	%parent = find_parent($in{'rename'});
 	if (index($in{'rename'}, '@') != -1) {
-        	#is snapshot
-		# my ($parent) = split('/', $in{'rename'});
-	        #($parent) = split('@', $in{'rename'});
+   	#is snapshot
 		$parent = $parent{'filesystem'};
-		#ui_list_snapshots("-r ".$in{'rename'});
 		print ui_table_start('Rename snapshot', 'width=100%', '6');
-		#ui_list_snapshot("-r ".$in{'rename'});
-        	print ui_table_row(undef, '<b>Snapshot:</b> '.$in{'rename'});
-        	print ui_table_row(undef, "<b>New Name: </b>".$parent."@".ui_textbox('name'));
+   	print ui_table_row(undef, '<b>Snapshot:</b> '.$in{'rename'});
+   	print ui_table_row(undef, "<b>New Name: </b>".$parent."@".ui_textbox('name'));
 		print ui_table_row(undef, ui_checkbox("recurse", "-r ", "Recursively rename the snapshots of all descendent datasets."));
 	} elsif (index($in{'rename'}, '/') != -1) {
-                #is filesystem
+    #is filesystem
 		$parent = $parent{'pool'};
 		ui_zfs_list("-r ".$in{'rename'});
 		print ui_table_start('Rename filesystem', 'width=100%', '6');
@@ -279,15 +275,14 @@ if ($in{'create'} =~ "zpool")
 		print ui_table_row(undef, ui_checkbox("prnt", "-p ", "Create all the nonexistent parent datasets."));
 	}
 	print ui_table_row(undef, ui_checkbox("force", "-f ", "Force unmount any filesystems that need to be unmounted in the process."));
-        print ui_hidden('cmd', 'rename');
-        print ui_hidden('zfs', $in{'rename'});
+  print ui_hidden('cmd', 'rename');
+  print ui_hidden('zfs', $in{'rename'});
 	print ui_hidden('parent', $parent);
-        print ui_table_row(undef, "<br />");
-        print ui_table_end();
-        print ui_submit('Rename');
-        print ui_form_end();
+  print ui_table_row(undef, "<br />");
+  print ui_table_end();
+  print ui_submit('Rename');
+  print ui_form_end();
 	$in{'zfs'} = $in{'rename'};
-        #ui_print_footer("status.cgi?zfs=".$in{'rename'}, $in{'rename'});
 } elsif ($in{'send'}) {
 	ui_print_header(undef, "Send Snapshot", "", undef, 1, 1);
 	print ui_form_start("cmd.cgi", "get");
@@ -335,7 +330,7 @@ if ($in{'create'} =~ "zpool")
 		if ($key =~ ($in{'zfs'}."@") ) { print ui_columns_row(["<a href='snapshot.cgi?snap=$key'>$key</a>", $snapshot{$key}{used}, $snapshot{$key}{refer} ]); }
 	}
 	print ui_columns_end();
-	print ui_create_snapshot($in{'zfs'});
+	print ui_snapshot_create($in{'zfs'});
 	#ui_print_footer('index.cgi?mode=snapshot', $text{'snapshot_return'});
 }
 

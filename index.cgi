@@ -40,7 +40,7 @@ print &ui_tabs_end_tab();
 # start snapshots tab
 if ($conf{'list_snap'}) {
   print &ui_tabs_start_tab('mode', 'snapshot');
-  ui_list_snapshots(undef);
+  ui_snapshot_list(undef);
   if ($conf{'snap_properties'}) { print "<a href='create.cgi?create=snapshot'>Create snapshot</a>"; }
   print &ui_tabs_end_tab();
 }

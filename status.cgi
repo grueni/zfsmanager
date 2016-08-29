@@ -40,7 +40,6 @@ if ($status{$root}{status} or $status{$root}{action} or $status{pool}{see}) {
 
 #-- tasks table--
 print ui_table_start("Tasks", "width=100%", "10", ['align=left'] );
-#print ui_table_row("Snapshot: ", ui_create_snapshot($in{'zfs'}));
 if ($conf{'zfs_properties'}) {
   print ui_table_row("New file system: ", "<a href='create.cgi?create=zfs&parent=$in{pool}'>Create file system</a>");
   #print ui_table_row('Export ',  "<a href='cmd.cgi?cmd=export&pool=$in{pool}'>Export pool</a>");
@@ -97,7 +96,7 @@ if ($in{'zfs'})
 
   #--tasks table--
   print ui_table_start("Tasks", "width=100%", "10");
-  if ($conf{'snap_properties'}) { print ui_table_row("Snapshot: ", ui_create_snapshot($in{'zfs'})); }
+  if ($conf{'snap_properties'}) { print ui_table_row("Snapshot: ", ui_snapshot_create($in{'zfs'})); }
   if ($conf{'zfs_properties'}) {
     #print ui_table_row("New file system: ", ui_popup_link('Create child file system', "create.cgi?create=zfs&parent=$in{'zfs'}"));
     print ui_table_row("New file system: ", "<a href='create.cgi?create=zfs&parent=".$in{'zfs'}."'>Create child file system</a>");
@@ -109,7 +108,7 @@ if ($in{'zfs'})
 	
 	#show list of snapshots based on filesystem
 	#print "Snapshots on this filesystem: <br />";
-	ui_list_snapshots('-rd1 '.$in{'zfs'});
+	ui_snapshot_list('-rd1 '.$in{'zfs'});
 	my %hash = zfs_get($in{'zfs'}, "all");
 	
 	ui_print_footer('index.cgi?mode=zfs', $text{'zfs_return'});
@@ -140,7 +139,7 @@ if ($in{'snap'})
 	print ui_table_row('Differences', "<a href='diff.cgi?snap=$in{snap}'>Show differences in $in{'snap'}</a>");
 	if ($conf{'snap_properties'}) { 
 		#print ui_table_row('Snapshot:', "<a href='snapshot.cgi?zfs=$zfs'>Create new snapshot based on $zfs</a>");
-		print ui_table_row("Snapshot: ", ui_create_snapshot($zfs));
+		print ui_table_row("Snapshot: ", ui_snapshot_create($zfs));
 		#print ui_table_row('Rename:', "Rename $in{'snap'}");
 		print ui_table_row("Rename: ", "<a href='create.cgi?rename=".$in{'snap'}."'>Rename ".$in{'snap'}."</a>");
 	}
