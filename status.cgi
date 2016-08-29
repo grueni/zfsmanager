@@ -8,38 +8,35 @@ use Data::Dumper;
 #show pool status
 if ($in{'pool'})
 {
-ui_print_header(undef, $text{'status_title'}, "", undef, 1, 1);
+ui_print_header(undef, $text{'status_title'}." ".$in{'pool'}, "", undef, 1, 1);
 
-#Show pool information
-#print "Pool:";
+my %status = zpool_status($in{'pool'});
+my $root = (sort keys %status)[0];
+
+#-- status table --
+print ui_hidden_table_start('Status', "width=100%", 1,'zpool_status', 1);
+print ui_table_row("Scan:", $status{$root}{scan});
+print ui_table_row("Errors:", $status{$root}{errors});
 ui_zpool_status($in{'pool'});
 
-#show properties for pool
-ui_zpool_properties($in{'pool'});
-
-#Show device configuration
-my $root = "00000000";
-my %status = zpool_status($in{'pool'});
-
-#-- status table--
-print ui_table_start("Status", "width=100%", "10");
-print ui_table_row("Scan:", $status{$root}{scan});
-print ui_table_row("Read:", $status{$root}{read});
-print ui_table_row("Write:", $status{$root}{write});
-print ui_table_row("Checkum:", $status{$root}{cksum});
-print ui_table_row("Errors:", $status{$root}{errors});
-print ui_table_end();
-
-if ($status{$root}{status} or $status{$root}{action} or $status{pool}{see}) {
-  print ui_table_start("Attention", "width=100%", "10");
-  if ($status{$root}{status}) { print ui_table_row("Status:", $status{$root}{status}); }
-  if ($status{$root}{action}) { print ui_table_row("Action:", $status{$root}{action}); }
-  if ($status{$root}{see})    { print ui_table_row("See:",    $status{$root}{see}); }
-  print ui_table_end();
+if (exists $status{$root}{status} || exists $status{$root}{action} || exists $status{$root}{see}) {
+#  print ui_table_start("Attention", "width=100%", "1");
+  print '<h3>Attention</h3>';
+  if (exists $status{$root}{status}) { print ui_table_row("Status:", $status{$root}{status}); }
+  if (exists $status{$root}{action}) { print ui_table_row("Action:", $status{$root}{action}); }
+  if (exists $status{$root}{see})    { print ui_table_row("See:",    $status{$root}{see}); }
+#  print ui_table_end();
 }
+print '<h4>Alerts: </h4>', get_alerts($in{'pool'}), "";
+print ui_hidden_table_end('zpool_status');
 
-#-- tasks table--
-print ui_table_start("Tasks", "width=100%", "10", ['align=left'] );
+#-- properties table --
+print ui_hidden_table_start('Properties', "width=100%", 4,'zpool_properties', 1);
+ui_zpool_properties($in{'pool'});
+print ui_hidden_table_end('zpool_properties');
+
+#-- tasks table --
+print ui_hidden_table_start('Tasks', 'width=100%', 1,'zpool_tasks',1, ['align=left'] );
 if ($conf{'zfs_properties'}) {
   print ui_table_row("New file system: ", "<a href='create.cgi?create=zfs&parent=$in{pool}'>Create file system</a>");
   #print ui_table_row('Export ',  "<a href='cmd.cgi?cmd=export&pool=$in{pool}'>Export pool</a>");
@@ -51,24 +48,29 @@ if ($conf{'pool_properties'}) {
   print ui_table_row('Export ',  "<a href='cmd.cgi?cmd=export&pool=$in{pool}'>Export pool</a>");
 }
 if ($conf{'pool_destroy'}) { print ui_table_row("Destroy ", "<a href='cmd.cgi?cmd=pooldestroy&pool=$in{pool}'>Destroy this pool</a>"); }
-print ui_table_end();
+print ui_hidden_table_end('zpool_tasks');
 
-#-- zfs table--
-#Show associated file systems
+#-- zfs table --
+print ui_hidden_table_start('ZFS File Systems and Datasets', "width=100%", 1,'zpool_zfs', 1);
 %zfs = list_zfs("-r ".$in{'pool'});
 print_zfs("status.cgi?zfs=",\%zfs);
+print ui_hidden_table_end('zpool_zfs');
 
 #-- vdev table--
-print ui_columns_start([ "Virtual Device", "State", "Read", "Write", "Cksum" ]);
+print ui_hidden_table_start('Virtual Devices', 'width=100%', 5,'zpool_vdevs',0 );
+print ui_columns_header([ "Virtual Device", "State", "Read", "Write", "Cksum" ]);
 foreach $key (sort keys %status)
 {
-	if (($status{$key}{parent} =~ /pool/) && ($key ne $root)) {
-		print ui_columns_row(["<a href='config-vdev.cgi?pool=".$status{0}{pool}.'&dev='.$key."'>".$status{$key}{name}."</a>", $status{$key}{state}, $status{$key}{read}, $status{$key}{write}, $status{$key}{cksum}]);
-	} elsif ($key ne $root) {
-		print ui_columns_row(["<a href='config-vdev.cgi?pool=".$status{0}{pool}.'&dev='.$key."'>|_".$status{$key}{name}."</a>", $status{$key}{state}, $status{$key}{read}, $status{$key}{write}, $status{$key}{cksum}]);
+  if ($key eq $root) {
+    print ui_columns_row([$status{$key}{name}, $status{$key}{state}, $status{$key}{read}, $status{$key}{write}, $status{$key}{cksum}]);
+	} elsif ($status{$key}{parent} =~ /pool/ && $key ne $root) {
+		print ui_columns_row(["<a href='config-vdev.cgi?pool=".$in{'pool'}.'&dev='.$key."'>_".$status{$key}{name}."</a>", $status{$key}{state}, $status{$key}{read}, $status{$key}{write}, $status{$key}{cksum}]);
+	} else {
+		print ui_columns_row(["<a href='config-vdev.cgi?pool=".$in{'pool'}.'&dev='.$key."'>__".$status{$key}{name}."</a>", $status{$key}{state}, $status{$key}{read}, $status{$key}{write}, $status{$key}{cksum}]);
 	}
 }
 print ui_columns_end();
+print ui_hidden_table_end('zpool_vdevs');
 
 ui_print_footer('', $text{'index_return'});
 }
@@ -76,7 +78,7 @@ ui_print_footer('', $text{'index_return'});
 #show filesystem status
 if ($in{'zfs'})
 {
-	ui_print_header(undef, "ZFS File System", "", undef, 1, 1);
+	ui_print_header(undef, "ZFS File System"." ".$in{'zfs'}, "", undef, 1, 1);
 	#start tabs
 	
 	#@tabs = ();

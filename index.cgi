@@ -26,13 +26,13 @@ print &ui_tabs_start_tab('mode', 'pools');
 #  print ' | ';
 #  print "<a href='create.cgi?import=1'>Import pool<a/>";
 #}
-%zpool = list_zpools();
-print_zpool('status.cgi?pool=',\%zpool);
+my $zpool = list_zpools();
+print_zpool('status.cgi?pool=',\%$zpool);
 print &ui_tabs_end_tab();
 
 # start zfs tab
 print &ui_tabs_start_tab('mode', 'zfs');
-%zfs = list_zfs();
+my %zfs = list_zfs();
 print_zfs('status.cgi?zfs=',\%zfs);
 if ($conf{'zfs_properties'}) { print "<a href='create.cgi?create=zfs'>Create file system</a>"; }
 print &ui_tabs_end_tab();

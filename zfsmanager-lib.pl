@@ -11,17 +11,17 @@ sub print_zpool {
   my $action = shift;
   my $zpool = shift;
   my $os = &getOS();
-  if ($os eq "Solaris") {
-    print ui_columns_start([ "Pool Name", "Size", "Alloc", "Free", "Cap", "Dedup", "Health"]);
-    foreach $key (keys %zpool)
+  if ($os eq 'Solaris') {
+    print ui_columns_start([ "Pool Name", "Size", "Alloc", "Free", "Cap", "Dedup", "Health"],'100%');
+    foreach $key (sort(keys %$zpool))
     {
-      print ui_columns_row(["<a href='$action$key'>$key</a>", $zpool{$key}{size}, $zpool{$key}{alloc}, $zpool{$key}{free}, $zpool{$key}{cap}, $zpool{$key}{dedup}, $zpool{$key}{health} ]);
+      print ui_columns_row(["<a href='$action$key'>$key</a>", $zpool->{$key}->{size}, $zpool->{$key}->{alloc}, $zpool->{$key}->{free}, $zpool->{$key}->{cap}, $zpool->{$key}->{dedup}, $zpool->{$key}->{health} ]);
     }
   } else {
-    print ui_columns_start([ "Pool Name", "Size", "Alloc", "Free", "Frag", "Cap", "Dedup", "Health"]);
-    foreach $key (keys %zpool)
+    print ui_columns_start([ "Pool Name", "Size", "Alloc", "Free", "Frag", "Cap", "Dedup", "Health"],'%100');
+    foreach $key (sort(keys %$zpool))
     {
-      print ui_columns_row(["<a href='$action$key'>$key</a>", $zpool{$key}{size}, $zpool{$key}{alloc}, $zpool{$key}{free}, $zpool{$key}{frag}, $zpool{$key}{cap}, $zpool{$key}{dedup}, $zpool{$key}{health} ]);
+      print ui_columns_row(["<a href='$action$key'>$key</a>", $zpool->{$key}->{size}, $zpool->{$key}->{alloc}, $zpool->{$key}->{free}, $zpool->{$key}->{frag}, $zpool->{$key}->{cap}, $zpool->{$key}->{dedup}, $zpool->{$key}->{health} ]);
     }
   }
   print ui_columns_end();
@@ -134,7 +134,7 @@ sub can_edit
 sub list_zpools
 {
   my ($pool) = @_;
-  my %hash=();
+  my $hash = {};
   my $os = &getOS();
   if ($os eq "Solaris") {
      #expecting NAME SIZE ALLOC FREE FRAG CAP DEDUP HEALTH ALTROOT
@@ -142,21 +142,21 @@ sub list_zpools
   } else {
      #expecting NAME SIZE ALLOC FREE FRAG CAP DEDUP HEALTH ALTROOT
      $list=`zpool list -o name,size,alloc,free,frag,cap,dedup,health,altroot -H $pool`;
-}
+  }
 
-open my $fh, "<", \$list;
-while (my $line =<$fh>)
-{
+  open my $fh, "<", \$list;
+  while (my $line =<$fh>)
+  {
     chomp ($line);
     if ($os = "Solaris") {
        my($name, $size, $alloc, $free, $cap, $dedup, $health, $altroot) = split(" ", $line);
-	     $hash{$name} = { size => $size, alloc => $alloc, free => $free, cap => $cap, dedup => $dedup, health => $health, altroot => $altroot };
+	     $hash->{$name} = { size => $size, alloc => $alloc, free => $free, cap => $cap, dedup => $dedup, health => $health, altroot => $altroot };
     } else {
        my($name, $size, $alloc, $free, $frag, $cap, $dedup, $health, $altroot) = split(" ", $line);
-       $hash{$name} = { size => $size, alloc => $alloc, free => $free, frag => $frag, cap => $cap, dedup => $dedup, health => $health, altroot => $altroot };
+       $hash->{$name} = { size => $size, alloc => $alloc, free => $free, frag => $frag, cap => $cap, dedup => $dedup, health => $health, altroot => $altroot };
     }
-}
-return %hash;
+  }
+  return $hash;
 }
 
 sub list_zfs
@@ -165,7 +165,7 @@ sub list_zfs
   my ($zfs) = @_;
   my $list = `zfs list -o name,used,avail,compressratio,refer,mountpoint -H $zfs`;
 # print "<pre>", "zfs list -o name,used,avail,compressratio,refer,mountpoint -H $zfs", "</pre>";
-  my %hash=();
+  my %hash = ();
 #expecting NAME USED AVAIL REFER MOUNTPOINT
   open my $fh, "<", \$list;
   while (my $line =<$fh>)
@@ -197,10 +197,11 @@ sub list_snapshots
 
 sub get_alerts
 {
-  my $alerts = `zpool status -x`;
+  my ($pool) = @_;
+  my $alerts = `zpool status -x $pool`;
   my %status = ();
   my $pool = ();
-  if ($alerts =~ /all pools are healthy/)
+  if ($alerts =~ /healthy/)
   {
     return $alerts;
   } else
@@ -237,7 +238,7 @@ sub zpool_status
   my ($pool)=@_;
   my $parent = "pool";
   my %status = ();
-  my $cmd=`zpool status $pool`;
+  my $cmd  = `zpool status $pool`;
   my $devs = 0;
   my $devi = sprintf("%08d", $devs);
   (undef, $cmdout) = split(/  pool: /, $cmd);
@@ -264,8 +265,9 @@ sub zpool_status
     chomp ($line);
     my($name, $state, $read, $write, $cksum) = split(" ", $line);
 
-    if ($name =~ "NAME") { #do nothing
-    } elsif (($name =~ $status{$devi}{pool}) && (length($name) == length($status{$devi}{pool}))) {
+    if ($name =~ "NAME") { 
+      #do nothing
+    } elsif ($name =~ $pool && length($name) == length($pool)) {
       $status{$devi}{name} = $name;
       $status{$devi}{read} = $read;
       $status{$devi}{write} = $write;
@@ -273,22 +275,19 @@ sub zpool_status
       $devs++;
 
     #check if vdev is a log or cache vdev
-    } elsif (($name =~ /log/) || ($name =~ /cache/))
-    {
+    } elsif (($name =~ /log/) || ($name =~ /cache/)) {
       $status{$devi} = {name => $name, state => $state, read => $read, write => $write, cksum => $cksum, parent => "pool",};
-      $parent = $devs;
+      $parent = $devi;
       $devs++;
 
     #check if vdev is a mirror, raidz or spare
-    } elsif (($name =~ /mirror/) || ($name =~ /raidz/) || ($name =~ /spare/))
-    {
+    } elsif (($name =~ /mirror/) || ($name =~ /raidz/) || ($name =~ /spare/)) {
       $status{$devi} = {name => $name, state => $state, read => $read, write => $write, cksum => $cksum, parent => "pool"};
-      $parent = $devs;
+      $parent = $devi;
       $devs++;
 
     #for all other vdevs, should be actual devices at this point
-    } elsif ($name)
-    {
+    } elsif ($name) {
       $status{$devi} = {name => $name, state => $state, read => $read, write => $write, cksum => $cksum, parent => $parent,};
       $devs++;
     }
@@ -468,9 +467,8 @@ sub ui_zpool_status
 {
   my ($pool, $action) = @_;
   if ($action eq undef) { $action = "status.cgi?pool="; }
-  my %zpool = list_zpools($pool);
-  my $os = &getOS();
-  print_zpool($action,\%zpool);
+  my $zpool = list_zpools($pool);
+  print_zpool($action,\%$zpool);
 }
 
 sub ui_zpool_properties
@@ -480,7 +478,7 @@ sub ui_zpool_properties
   my %hash = zpool_get($pool, "all");
   my %props =  property_desc();
   my %properties = pool_properties_list();
-  print ui_table_start("Properties", "width=100%", undef);
+#  print ui_table_start("Properties", "width=100%", undef);
   foreach $key (sort(keys %{$hash{$pool}}))
   {
     if (exists $properties{$key} || exists $props{$key})
@@ -491,7 +489,7 @@ sub ui_zpool_properties
     #print ui_table_row($key, $hash{$pool}{$key}{value});
     }
   }
-  print ui_table_end();
+#  print ui_table_end();
 }
 
 sub ui_zfs_list
