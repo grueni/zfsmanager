@@ -4,6 +4,7 @@ use Data::Dumper;
 use POSIX qw(strftime);
 &init_config();
 foreign_require("mount", "mount-lib.pl");
+require './property-list-en.pl';
 
 my %access = &get_module_acl();
 
@@ -164,7 +165,6 @@ sub list_zfs
 #zfs list
   my ($zfs) = @_;
   my $list = `zfs list -o name,used,avail,compressratio,refer,mountpoint -H $zfs`;
-# print "<pre>", "zfs list -o name,used,avail,compressratio,refer,mountpoint -H $zfs", "</pre>";
   my %hash = ();
 #expecting NAME USED AVAIL REFER MOUNTPOINT
   open my $fh, "<", \$list;
@@ -300,15 +300,15 @@ sub zfs_get
 {
   my ($zfs, $property) = @_;
   if (~$property) {my $property="all";}
-  my $os = &getOS();
+#  my $os = &getOS();
   my %hash=();
-  my $get=`zfs get $property $zfs -H`;
+  my $get=`zfs get -H $property $zfs`;
   open my $fh, "<", \$get;
   #expecting NAME PROPERTY VALUE SOURCE
   while (my $line = <$fh>)
   {
     chomp ($line);
-    if ($os eq "Solaris") {$line =~ s/ +/\t/g;}
+#    if ($os eq "Solaris") {$line =~ s/ +/\t/g;}
     my($name, $property, $value, $source) = split(/\t/, $line);
     $hash{$name}{$property} = { value => $value, source => $source };
     #$hash->{$name->{$property->{'value'}}} = $value;
@@ -463,6 +463,20 @@ sub find_parent
   return %parent;
 }
 
+sub ui_zpools_list
+{
+	print &ui_table_start($text{'ZFS pools'}, undef);
+	my @leftlinks = ();
+  my @rightlinks = ();
+	push(@leftlinks, &ui_link("create.cgi?create=zpool",'Create new pool') );
+	push(@leftlinks, &ui_link("create.cgi?import=1",'Import pool') );
+	local @grid = ( &ui_links_row(\@leftlinks), &ui_links_row($rightlinks) );
+	print &ui_grid_table(\@grid, 2, 100, [ "align=left", "align=right" ]);
+	my $zpool = list_zpools();
+	print_zpool('status.cgi?pool=',\%$zpool);
+	print &ui_table_end();
+}
+
 sub ui_zpool_status
 {
   my ($pool, $action) = @_;
@@ -474,7 +488,6 @@ sub ui_zpool_status
 sub ui_zpool_properties
 {
   my ($pool) = @_;
-  require './property-list-en.pl';
   my %hash = zpool_get($pool, "all");
   my %props =  property_desc();
   my %properties = pool_properties_list();
@@ -485,7 +498,7 @@ sub ui_zpool_properties
     {
       print ui_table_row('<a href="property.cgi?pool='.$pool.'&property='.$key.'">'.$key.'</a>', $hash{$pool}{$key}{value});
     } else {
-    print ui_table_row($key, $hash{$pool}{$key}{value});
+      print ui_table_row($key, $hash{$pool}{$key}{value});
     #print ui_table_row($key, $hash{$pool}{$key}{value});
     }
   }
@@ -494,45 +507,68 @@ sub ui_zpool_properties
 
 sub ui_zfs_list
 {
-   my ($zfs, $action)=@_;
-   my %zfs = list_zfs($zfs);
-   if ($action eq undef) { $action = "status.cgi?zfs="; }
-   print_zfs($action,\%zfs);
+  local ($zfs, $action)=@_;
+  %conf = get_zfsmanager_config();
+	local %zfs = list_zfs($zfs);
+  if ($action eq undef) { $action = "status.cgi?zfs="; }
+	print &ui_table_start($text{'ZFS filesystems & datasets'}, undef);
+  local @leftlinks = ();
+  local @rightlinks = ();
+  if ($conf{'zfs_properties'}) { 
+    push(@leftlinks, &ui_link("create.cgi?create=zfs",'Create file system') );
+  }
+  local @grid = ( &ui_links_row(\@leftlinks), &ui_links_row($rightlinks) );
+  print &ui_grid_table(\@grid, 2, 100, [ "align=left", "align=right" ]);
+	print_zfs($action,\%zfs);
+	print &ui_table_end();
 }
 
 sub ui_zfs_properties
 {
   my ($zfs)=@_;
-  require './property-list-en.pl';
+#  print "<pre>zfs=$zfs</pre>";
   my %hash = zfs_get($zfs, "all");
-  if (!$hash{$zfs}{'com.sun:auto-snapshot'}) { $hash{$zfs}{'com.sun:auto-snapshot'}{'value'} = '-'; }
+#  print Dumper(\%hash);
+  if (!exists $hash{$zfs}{'com.sun:auto-snapshot'}) { $hash{$zfs}{'com.sun:auto-snapshot'}{'value'} = '-'; }
   my %props =  property_desc();
   my %properties = properties_list();
+# TODO: order of input, not alphabetically
   foreach $key (sort(keys %{$hash{$zfs}}))
   {		
     if (($properties{$key}) || ($props{$key}))
     {		
-      if ($key =~ 'origin') { print ui_table_row('<a href="property.cgi?zfs='.$zfs.'&property='.$key.'">'.$key.'</a>', "<a href='status.cgi?snap=$hash{$zfs}{$key}{value}'>$hash{$zfs}{$key}{value}</a>");
-      } else { print ui_table_row('<a href="property.cgi?zfs='.$zfs.'&property='.$key.'">'.$key.'</a>', $hash{$zfs}{$key}{value}); }
+      if ($key =~ 'origin') { 
+        print ui_table_row('<a href="property.cgi?zfs='.$zfs.'&property='.$key.'">'.$key.'</a>', "<a href='status.cgi?snap=$hash{$zfs}{$key}{value}'>$hash{$zfs}{$key}{value}</a>");
+      } else { 
+        print ui_table_row('<a href="property.cgi?zfs='.$zfs.'&property='.$key.'">'.$key.'</a>', $hash{$zfs}{$key}{value}); }
     } else {
-    print ui_table_row($key, $hash{$zfs}{$key}{value});
+      print ui_table_row($key, $hash{$zfs}{$key}{value});
     }
   }
 }
 
 sub ui_snapshot_list
 {
-  my ($zfs) = @_;
+  local ($zfs) = @_;
   %snapshot = list_snapshots($zfs);
   %conf = get_zfsmanager_config();
+  local @leftlinks = ();
+  local @rightlinks = ();
+
+  print &ui_table_start($text{'Snapshots'}, undef);
   if ($conf{'snap_destroy'}) { 
-    print ui_form_start('cmd.cgi', 'post');
-    print ui_hidden('cmd', 'multisnap');
-    print select_all_link('select', '', "Select All"), " | ", select_invert_link('select', '', "Invert Selection");
-    print " | ".ui_submit("Destroy selected snapshots");
+    push(@leftlinks, &ui_form_start('cmd.cgi', 'post') );
+    push(@leftlinks, &ui_hidden('cmd', 'multisnap' ) );
+    push(@leftlinks, &select_all_link('select', '', "Select All").&select_invert_link('select', '', "Invert Selection") );
+    push(@leftlinks, " | ".&ui_submit("Destroy selected snapshots") );
   }
+  if ($conf{'snap_properties'}) {
+    push(@leftlinks, " | ".&ui_link("create.cgi?create=snapshot",'Create snapshot') );
+  }
+  local @grid = ( &ui_links_row(\@leftlinks), &ui_links_row($rightlinks) );
+  print &ui_grid_table(\@grid, 2, 100, [ "align=left", "align=right" ]);
   print ui_columns_start([ "Snapshot", "Used", "Refer" ]);
-  my $num = 0;
+  local $num = 0;
   foreach $key (sort(keys %snapshot))
   {
     if ($conf{'snap_destroy'}) {
@@ -544,10 +580,11 @@ sub ui_snapshot_list
   }
   print ui_columns_end();
   if ($conf{'snap_destroy'}) {
-    print select_all_link('select', '', "Select All"), " | ", select_invert_link('select', '', "Invert Selection");
+#    print select_all_link('select', '', "Select All"), " | ", select_invert_link('select', '', "Invert Selection");
 #    print " | ".ui_submit("Destroy selected snapshots");
     print ui_form_end();
   }    
+  print &ui_table_end();
 }
 
 sub ui_snapshot_create
